@@ -1,4 +1,4 @@
-from models.MiniSIA import SIA, TUnit, TUnits
+from models.mini_sia import SIA, TUnit, TUnits
 
 
 def main():
