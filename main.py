@@ -2,9 +2,9 @@ from models.mini_sia import SIA, TUnit, TUnits
 
 
 def main():
-    print(SIA.bone_marrow_binary(7, 4))
+    print(SIA.bone_marrow_binary(7, 8))
     sia = SIA()
-    sia.units = SIA.bone_marrow_binary(7, 4)
+    sia.units = SIA.bone_marrow_binary(7, 8)
 
     def hamming_func(s1: TUnit, s2: TUnit) -> float:
         summation = 0
@@ -12,8 +12,11 @@ def main():
             summation += a == b
         return summation
 
-    detectors = sia.negative_selection(hamming_func, 2, 4, 2)
+    detectors = sia.negative_selection(hamming_func, 2, 8, 2)
     print(detectors)
+    antigens=['10011111', '11101000', '10000011', '10001000', '01000001', '01011001', '11000010']
+    print(sia.clonalg(hamming_func,antigens,2,2,10))
+    
 
 
 if __name__ == '__main__':

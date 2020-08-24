@@ -1,5 +1,6 @@
 from typing import Callable, List, NewType
 import numpy as np
+from random import randint
 
 TUnit = NewType("TUnit", str)
 TUnits = List[TUnit]
@@ -22,6 +23,18 @@ class SIA:
         self.units = []
         self.memory = []
 
+        
+    @staticmethod
+    def __mutation(x: list,size: int) -> list:
+        #x = list(map(str,x))
+        for i in range(len(x)):
+            rand_int=randint(0,size-1)
+            x[i] = list(map(str,x[i]))
+            x[i][rand_int] = ('1','0')[int(x[i][rand_int])]
+            x[i] = "".join(x[i])       
+        return x
+                        
+    
     @staticmethod
     def __random_generation(size: int) -> TUnit:
         """"
@@ -34,6 +47,21 @@ class SIA:
             TUnit: new random TUnit.
         """
         return ''.join(map(str, np.random.randint(0, 2, size, int)))
+
+    @staticmethod
+    def __max_elements(list0, list1, N):
+        final_list = [] 
+    
+        for i in range(0, N):
+            max1 = 0
+            for j in range(len(list1)):
+                if list1[j] > max1:
+                    max1 = list1[j]                    
+                    ele1 = list0[j]
+            list1.remove(max1)            
+            list0.remove(ele1)
+            final_list.append(ele1)
+        return final_list
 
     @staticmethod
     def bone_marrow_binary(n: int, size: int) -> TUnits:
@@ -52,6 +80,7 @@ class SIA:
             for num in np.random.randint(0, 2, size, int):
                 population[i] += str(num)
         return population
+    
 
     def negative_selection(self, affinity: Callable[[TUnit, TUnit], float], n: int, size: int,
                            threshold: int) -> TUnits:
@@ -70,9 +99,11 @@ class SIA:
         selected_units = []
         while len(selected_units) < n:
             random_unit = self.__random_generation(size)
-            if any(list(map(lambda x: affinity(random_unit, x) < threshold, self.units))): selected_units += [
-                random_unit]
+            if any(list(map(lambda x: affinity(random_unit, x) < threshold, self.units))):
+                selected_units += [random_unit]
         return selected_units
+
+
 
     @staticmethod
     def monitoring(affinity, antibodies: TUnits, units: TUnits, threshold: int) -> TUnits:
@@ -96,6 +127,8 @@ class SIA:
                     antigens.add(unit)
         return list(antigens)
 
+
+
     def clonalg(self, affinity: Callable[[TUnit, TUnit], float], antigens: TUnits, cloning: int, replacing: int,
                 iterations: int) -> TUnits:
         """
@@ -112,9 +145,27 @@ class SIA:
         Returns:
             TUnits
         """
-        memory = {}
+        memory = {x:self.units[0] for x in antigens}
+        
         for iteration in range(iterations):
             for antigen in antigens:
+                aff = list(map(lambda x: affinity(antigen, x) , self.units))                
+                C = self.__max_elements(self.units.copy(), aff, cloning)
+                muted = self.__mutation(C,len(self.units[0]))                
+                aff = list(map(lambda x: affinity(antigen, x) , muted))
+                max_affinity = max(muted,key=lambda m: affinity(antigen, m))
+                memory[antigen] = max(memory[antigen],max_affinity)
+        return memory
+                
+                
+                
+                
+                
+                
+        
+                
+                
+                
 
 
         return
