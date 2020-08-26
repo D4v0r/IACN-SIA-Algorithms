@@ -27,7 +27,7 @@ class SIA:
 
     def __mutation(self, x: list, antigen, affinity) -> list:
         for i in reversed(range(len(x))):
-            number_mutations = int((1 // affinity(x[i], antigen)) * self.beta)
+            number_mutations = int((1 + i // affinity(x[i], antigen)) * self.beta)
             for mutation in range(number_mutations):
                 rand_int = randint(0, self.unit_size - 1)
                 x[i] = list(map(str, x[i]))
@@ -49,10 +49,12 @@ class SIA:
         return ''.join(map(str, np.random.randint(0, 2, size, int)))
 
     def __insert_pattern(self, antigen, new_pattern):
-        if self.memory[antigen] is None:
-            self.memory[antigen] = new_pattern
-        else:
-            self.memory[antigen] = max(self.memory[antigen], new_pattern)
+        best_memory = max(self.memory[antigen], new_pattern)
+        if best_memory != self.memory[antigen]:
+            self.units.remove(self.memory[antigen])
+            self.memory[antigen] = best_memory
+            self.units += [best_memory]
+
 
     def __replace(self, replacing, affinity, antigen):
         random_units = self.bone_marrow_binary(replacing, self.unit_size)
@@ -154,12 +156,13 @@ class SIA:
         Returns:
             TUnits
         """
-        self.memory = {x: None for x in antigens}
+        self.memory = {antigens[i]: self.units[i] for i in range(len(antigens))}
 
         for iteration in range(iterations):
             for antigen in antigens:
-                selected_antibodies = self.__max_elements(self.units.copy(), affinity, antigen, cloning)  # Elegir los mejores
-                clones = self.__clonation(selected_antibodies) # clonar a los mejores.
+                selected_antibodies = self.__max_elements(self.units.copy(), affinity, antigen,
+                                                          cloning)  # Elegir los mejores
+                clones = self.__clonation(selected_antibodies)  # clonar a los mejores.
                 mutated = self.__mutation(clones, antigen, affinity)  # Mutar a los que tiene mas baja afinidad.
                 best_detector = max(mutated, key=lambda m: affinity(antigen, m))  # Buscar el mejor detector del antigeno.
                 self.__insert_pattern(antigen, best_detector)  # Reemplazar en la memoria si es mejor.
