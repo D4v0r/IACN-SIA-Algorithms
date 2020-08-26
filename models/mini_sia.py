@@ -48,13 +48,12 @@ class SIA:
         """
         return ''.join(map(str, np.random.randint(0, 2, size, int)))
 
-    def __insert_pattern(self, antigen, new_pattern):
-        best_memory = max(self.memory[antigen], new_pattern)
-        if best_memory != self.memory[antigen]:
+    def __insert_pattern(self, antigen, new_pattern, affinity):
+        best_memory = max(self.memory[antigen], new_pattern, key=lambda x: affinity(x, antigen))
+        if best_memory != self.memory[antigen] and self.memory[antigen] in self.units:
             self.units.remove(self.memory[antigen])
             self.memory[antigen] = best_memory
             self.units += [best_memory]
-
 
     def __replace(self, replacing, affinity, antigen):
         random_units = self.bone_marrow_binary(replacing, self.unit_size)
@@ -164,8 +163,9 @@ class SIA:
                                                           cloning)  # Elegir los mejores
                 clones = self.__clonation(selected_antibodies)  # clonar a los mejores.
                 mutated = self.__mutation(clones, antigen, affinity)  # Mutar a los que tiene mas baja afinidad.
-                best_detector = max(mutated, key=lambda m: affinity(antigen, m))  # Buscar el mejor detector del antigeno.
-                self.__insert_pattern(antigen, best_detector)  # Reemplazar en la memoria si es mejor.
+                best_detector = max(mutated,
+                                    key=lambda m: affinity(antigen, m))  # Buscar el mejor detector del antigeno.
+                self.__insert_pattern(antigen, best_detector, affinity)  # Reemplazar en la memoria si es mejor.
                 self.__replace(replacing, affinity, antigen)  # Reemplazar los n peores por individuos nuevos.
 
         return self.memory
