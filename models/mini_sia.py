@@ -19,22 +19,22 @@ class SIA:
         a collection of TUnits, represents the immune cells of this immune system.
     """
 
-    def __init__(self):
+    def __init__(self, unit_size, beta):
         self.units = []
-        self.memory = []
+        self.memory = {}
+        self.unit_size = unit_size
+        self.beta = beta
 
-        
-    @staticmethod
-    def __mutation(x: list,size: int) -> list:
-        #x = list(map(str,x))
-        for i in range(len(x)):
-            rand_int=randint(0,size-1)
-            x[i] = list(map(str,x[i]))
-            x[i][rand_int] = ('1','0')[int(x[i][rand_int])]
-            x[i] = "".join(x[i])       
+    def __mutation(self, x: list, antigen, affinity) -> list:
+        for i in reversed(range(len(x))):
+            number_mutations = int((1 // affinity(x[i], antigen)) * self.beta)
+            for mutation in range(number_mutations):
+                rand_int = randint(0, self.unit_size - 1)
+                x[i] = list(map(str, x[i]))
+                x[i][rand_int] = ('1', '0')[int(x[i][rand_int])]
+                x[i] = "".join(x[i])
         return x
-                        
-    
+
     @staticmethod
     def __random_generation(size: int) -> TUnit:
         """"
@@ -48,20 +48,34 @@ class SIA:
         """
         return ''.join(map(str, np.random.randint(0, 2, size, int)))
 
+    def __insert_pattern(self, antigen, new_pattern):
+        if self.memory[antigen] is None:
+            self.memory[antigen] = new_pattern
+        else:
+            self.memory[antigen] = max(self.memory[antigen], new_pattern)
+
+    def __replace(self, replacing, affinity, antigen):
+        random_units = self.bone_marrow_binary(replacing, self.unit_size)
+        self.units = sorted(self.units, key=lambda x: affinity(x, antigen))
+        for replace in range(replacing):
+            self.units[replace] = random_units[replace]
+
+    def __clonation(self, selected_antibodies):
+        new_population = []
+        for i in range(len(selected_antibodies)):
+            number_clones = (self.beta * len(self.units)) // (i + 1)
+            for iteration in range(number_clones):
+                new_population += [selected_antibodies[i]]
+        return new_population
+
     @staticmethod
-    def __max_elements(list0, list1, N):
-        final_list = [] 
-    
-        for i in range(0, N):
-            max1 = 0
-            for j in range(len(list1)):
-                if list1[j] > max1:
-                    max1 = list1[j]                    
-                    ele1 = list0[j]
-            list1.remove(max1)            
-            list0.remove(ele1)
-            final_list.append(ele1)
-        return final_list
+    def __max_elements(antibodies, affinity, antigen, N):
+        selected = []
+        while len(selected) < N:
+            u = max(antibodies, key=lambda x: affinity(x, antigen))
+            selected += [u]
+            antibodies.remove(u)
+        return selected
 
     @staticmethod
     def bone_marrow_binary(n: int, size: int) -> TUnits:
@@ -80,7 +94,6 @@ class SIA:
             for num in np.random.randint(0, 2, size, int):
                 population[i] += str(num)
         return population
-    
 
     def negative_selection(self, affinity: Callable[[TUnit, TUnit], float], n: int, size: int,
                            threshold: int) -> TUnits:
@@ -102,8 +115,6 @@ class SIA:
             if any(list(map(lambda x: affinity(random_unit, x) < threshold, self.units))):
                 selected_units += [random_unit]
         return selected_units
-
-
 
     @staticmethod
     def monitoring(affinity, antibodies: TUnits, units: TUnits, threshold: int) -> TUnits:
@@ -127,8 +138,6 @@ class SIA:
                     antigens.add(unit)
         return list(antigens)
 
-
-
     def clonalg(self, affinity: Callable[[TUnit, TUnit], float], antigens: TUnits, cloning: int, replacing: int,
                 iterations: int) -> TUnits:
         """
@@ -145,27 +154,15 @@ class SIA:
         Returns:
             TUnits
         """
-        memory = {x:self.units[0] for x in antigens}
-        
+        self.memory = {x: None for x in antigens}
+
         for iteration in range(iterations):
             for antigen in antigens:
-                aff = list(map(lambda x: affinity(antigen, x) , self.units))                
-                C = self.__max_elements(self.units.copy(), aff, cloning)
-                muted = self.__mutation(C,len(self.units[0]))                
-                aff = list(map(lambda x: affinity(antigen, x) , muted))
-                max_affinity = max(muted,key=lambda m: affinity(antigen, m))
-                memory[antigen] = max(memory[antigen],max_affinity)
-        return memory
-                
-                
-                
-                
-                
-                
-        
-                
-                
-                
+                selected_antibodies = self.__max_elements(self.units.copy(), affinity, antigen, cloning)  # Elegir los mejores
+                clones = self.__clonation(selected_antibodies) # clonar a los mejores.
+                mutated = self.__mutation(clones, antigen, affinity)  # Mutar a los que tiene mas baja afinidad.
+                best_detector = max(mutated, key=lambda m: affinity(antigen, m))  # Buscar el mejor detector del antigeno.
+                self.__insert_pattern(antigen, best_detector)  # Reemplazar en la memoria si es mejor.
+                self.__replace(replacing, affinity, antigen)  # Reemplazar los n peores por individuos nuevos.
 
-
-        return
+        return self.memory
